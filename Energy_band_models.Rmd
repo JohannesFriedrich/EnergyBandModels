@@ -1,0 +1,430 @@
+---
+title: "Energy_band_models"
+author: "Johannes Friedrich"
+date: "19 March 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, 
+                      cache = F, 
+                      dev = c('pdf'),
+                      dpi = 300, 
+                      warning = F, 
+                      message = F, 
+                      fig.align = 'center')
+
+library(scales)
+library(ggplot2)
+library(rootSolve)
+
+theme <- theme(axis.text = element_text(size = 14),
+             axis.title = element_text(size = 14, face = "bold"),
+             legend.text = element_text(size = 12),
+             legend.title = element_text(size = 12, face = "bold"))
+```
+
+```{r, energy_band_model_T_0}
+
+electrons <- data.frame(
+  x = seq(0,1, length.out = 10),
+  y = rep(c(-2.2,-1.5, -1, -0.6, -0.3, 0), each = 10)
+)
+
+ggplot(electrons) +
+  geom_point(aes(x,y), size = 3) +
+  geom_hline(yintercept = c(-2.2,-1.5, -1, -0.6, -0.3, 0, 4, 4.3, 4.6, 5)) +
+  geom_hline(yintercept = 2, linetype = "dashed") + 
+  coord_fixed(1/5) +
+  xlab("") +
+  ylab("") +
+  theme(axis.ticks = element_blank(),
+        axis.text.x = element_blank()) +
+  scale_y_continuous(breaks = c(0, 2, 4), 
+                     label = c(expression(paste(~E[V])),
+                               expression(paste(~E[F])),
+                               expression(paste(~E[C])))) +
+  annotate("text", x = 0.5, y = 1.5, label = "T = 0 K", size = 8) +
+    theme_classic() +
+    theme(axis.ticks = element_blank(),
+        axis.text.x = element_blank()) +
+  theme
+
+
+```
+
+```{r, energy_band_model_T_not_0}
+
+electrons <- data.frame(
+  x = seq(0,1, length.out = 10),
+  y = rep(c(-2.2,-1.5, -1, -0.6, -0.3, 0), each = 10)
+)
+
+ggplot(electrons) +
+  geom_hline(yintercept = c(-2.2,-1.5, -1, -0.6, -0.3, 0, 4, 4.3, 4.6, 5)) +
+  geom_point(aes(x,y), 
+             size = 3, 
+             shape = 21,
+             size = 3, 
+             fill = c(rep("black", 44), "white", rep("black",2), "white", rep("black",2),
+            "white" , "black","black","white", rep("black",2), "white",rep("black",2), "white"),
+             show.legend = F) +
+  geom_point(data = data.frame(
+    x = c(0, 1/3, 4/9, 6/9, 7/9, 1),
+    y = c(4, 4, 4, 4, 4.3, 4)
+  ), aes(x,y), size = 3) + 
+  coord_fixed(1/5) +
+  xlab("") +
+  ylab("") +
+  theme(axis.ticks = element_blank(),
+        axis.text.x = element_blank()) +
+  scale_y_continuous(breaks = c(0, 4), 
+                     label = c(expression(paste(~E[V])),
+                               expression(paste(~E[C])))) +
+  annotate("text", x = 0.5, y = 1.5, label = "T > 0 K", size = 8) +
+  theme_classic() +
+    theme(axis.ticks = element_blank(),
+        axis.text.x = element_blank()) +
+  theme
+
+```
+
+## Donator
+
+```{r energy_band_model_donor_acceptor}
+
+electrons <- data.frame(
+  x = seq(0,1, length.out = 10),
+  y = rep(c(-2.2,-1.5, -1, -0.6, -0.3, 0), each = 10),
+  alpha = c(rep(1, 44), 0, rep(1,2), 0.1, 1,1,
+            0.1 , 1,1,0.1,1,1,0.1,1,1, 1)
+)
+
+donor <- data.frame(
+  x = c(1/9, 3/9),
+  y = c(3.2, 3.2)
+)
+
+acceptor <- data.frame(
+  x = c(6/9, 8/9),
+  y = c(0.7, 0.7)
+)
+
+arrow <- data.frame(
+  x_start = c(2/9, 7/9),
+  x_end = c(2/9, 7/9),
+  y_start = c(4, 0),
+  y_end = c(3.2, 0.7)
+)
+
+captured <- data.frame(
+  x = c(2/9, 7/9),
+  y = c(3.2, 0.7))
+
+e_CB <- data.frame(
+    x = c(0, 1/3, 6/9, 7/9, 1),
+    y = c(4, 4, 4, 4.3, 4))
+
+ggplot() +
+  geom_hline(yintercept = c(-2.2,-1.5, -1, -0.6, -0.3, 0, 4, 4.3, 4.6, 5)) +
+  geom_point(data = electrons, 
+             mapping = aes(x,y), 
+             shape = 21,
+             size = 3, 
+             fill = c(rep("black", 44), "white", rep("black",2), "white", rep("black",2),
+            "white" , "black","black","white", rep("black",2), "white",rep("black",3)),
+             show.legend = F)  +
+  ## add electrons in conduction band
+  geom_point(data = e_CB, 
+             aes(x,y), 
+             size = 3,
+             fill = "black",
+             shape = 21) + 
+  ## add donor state
+  geom_line(data = donor, aes(x,y), show.legend = F) +
+  ## add acceptor state
+  geom_line(data = acceptor, aes(x,y), show.legend = F) +
+  ## add captured electrons and holes 
+  geom_point(data = captured, 
+             aes(x,y),
+             shape = 21,
+             size = 3, 
+             fill =  c("black", "white"),
+             show.legend = F) +
+  coord_fixed(1/5) +
+  xlab("") +
+  ylab("") +
+  scale_y_continuous(breaks = c(0, 0.7, 3.2, 4), 
+                     label = c(expression(paste(~E[V])), 
+                               expression(paste(~E[A])),
+                               expression(paste(~E[D])),
+                               expression(paste(~E[C])))) +
+  theme_classic() +
+    theme(axis.ticks = element_blank(),
+        axis.text.x = element_blank()) +
+  annotate("text", x = 6/9, y = 3.2, label = "Donor state", size = 5) +
+  annotate("text", x = 3/9, y = 0.7, label = "Accpetor state", size = 5) +
+  theme
+
+```
+
+## Demarcation levels
+
+```{r energy_band_model_demarcation}
+
+donor <- data.frame(
+  x = c(0/9, 2/9),
+  y = c(4.2, 4.2) -.5
+)
+
+acceptor <- data.frame(
+  x = c(6/9, 8/9),
+  y = c(0.7, 0.7)
+)
+
+recombination_centre <- data.frame(
+  x = c(3/9, 5/9),
+  y = c(2.4, 2.4)
+)
+
+bands <- data.frame(
+  x_start = c(-Inf, -Inf),
+  x_end = c(Inf, Inf),
+  y_start = c(-0.5, 4.5),
+  y_end = c(0, 5)
+)
+
+captured <- data.frame(
+  x = c(1/9, 4/9),
+  y = c(4.2-0.5, 2.4))
+
+ggplot() +
+  geom_hline(yintercept = c(0, 5-.5)) +
+  ## add donor state
+  geom_line(data = donor, aes(x,y), show.legend = F) +
+  ## add acceptor state
+  geom_line(data = acceptor, aes(x,y), show.legend = F) +
+  ## add recombination state
+  geom_line(data = recombination_centre, aes(x,y), show.legend = F) +
+   ## add demarcations_electrons
+  geom_hline(yintercept = 3.9-0.5, linetype = "dashed") +
+   ## add demarcations_holes
+  geom_hline(yintercept = 1.2, linetype = "dashed") +
+  ## add captured electrons and holes 
+  geom_point(data = captured, 
+             aes(x,y),
+             shape = 21,
+             size = 3, 
+             fill =  c("black", "white"),
+             show.legend = F) +
+  # geom_segment(data = arrow, mapping = aes(x = x_start, y = y_start, xend = x_end, yend = y_end), 
+  #              arrow = arrow(ends = "both",
+  #                            angle = 20)) + 
+  # scale_fill_manual(values = c("black", "white")) +
+  coord_fixed(1/5) +
+  xlab("") +
+  ylab("") +
+  scale_y_continuous(breaks = c(0, 0.7, 1.2, 3.9-.5, 4.2-0.5, 5-.5), 
+                     label = c(expression(paste(~E[V])), 
+                               expression(paste(~E[A])),
+                               expression(paste(~E[D[p]])),
+                               expression(paste(~E[D[n]])),
+                               expression(paste(~E[D])),
+                               expression(paste(~E[C])))) +
+  theme_classic() +
+    theme(axis.ticks = element_blank(),
+          axis.line.x = element_blank(),
+          axis.text.x = element_blank()) +
+  annotate("text", x = 5.5/9, y = 5.2-0.5, label = "Conduction band", size = 5) +
+  annotate("text", x = 5.5/9, y = -0.2, label = "Valence band", size = 5) +
+  ## add arrow annotation
+  # annotate("text", x = 1.2, y = 4.3, label = "Electron\n traps", size = 5) +
+  geom_text(data = data.frame(x = rep(1.1,3),
+                              y = c(4.45-0.5, 2.5-.05, 0.6)),
+            mapping = aes(x,y,label = c("Electron\ntrap", "Recombination\ncentre", "Hole\ntrap")),
+            size = 4.5,
+            angle = 0) +
+    ## shaded area valence band
+  geom_rect(data = bands,
+            mapping = aes(xmin = x_start, ymin = y_start, xmax = x_end, ymax = y_end),
+            alpha = .3) + 
+  xlim(0, 1.25) +
+  theme
+
+```
+
+```{r energy_band_model_OTOR}
+
+e_trap <- data.frame(
+  x = c(0/9, 2/9),
+  y = c(4.2, 4.2)
+)
+
+recombination_centre <- data.frame(
+  x = c(3/9, 5/9),
+  y = c(2.4, 2.4)
+)
+
+arrow <- data.frame(
+  x_start = c(0.5/9, 1.5/9, 4/9),
+  x_end = c(0.5/9, 1.5/9, 4/9),
+  y_start = c(5, 4.2, 5),
+  y_end = c(4.2, 5, 2.4)
+)
+
+captured <- data.frame(
+  x = c(1/9, 4/9),
+  y = c(4.2, 2.4))
+
+bands <- data.frame(
+  x_start = c(-Inf, -Inf),
+  x_end = c(Inf, Inf),
+  y_start = c(0.5, 5.5),
+  y_end = c(1, 5)
+)
+
+
+ggplot() +
+  geom_hline(yintercept = c(1, 5)) +
+  ## add donor state
+  geom_line(data = e_trap, aes(x,y), show.legend = F) +
+  ## add recombination state
+  geom_line(data = recombination_centre, aes(x,y), show.legend = F) +
+  ## add captured electrons and holes 
+  geom_point(data = captured, 
+             aes(x,y),
+             shape = 21,
+             size = 3, 
+             fill =  c("black", "white"),
+             show.legend = F) +
+  geom_segment(data = arrow, mapping = aes(x = x_start, y = y_start, xend = x_end, yend = y_end),
+               arrow = arrow(angle = 20)) +
+  ## shaded area valence band
+  geom_rect(data = bands,
+            mapping = aes(xmin = x_start, ymin = y_start, xmax = x_end, ymax = y_end),
+            alpha = .3) + 
+  coord_fixed(1/5) +
+  xlab("") +
+  ylab("") +
+  theme_classic() +
+  annotate("text", x = 2.2/9, y = 5.2, label = "Conduction band", size = 5) +
+  annotate("text", x = 2.2/9, y = 0.8, label = "Valence band", size = 5) +
+  annotate("text", x = 4/9, y = 2, label = "M, m", size = 5) +
+  annotate("text", x = 1/9, y = 3.8, label = "N, n, E, s", size = 5) +
+  annotate("text", x = -0.5/9, y = 4.6, label = "~A[n]", size = 5, parse = TRUE) +
+  annotate("text", x = 2/9, y = 4.6, label = "~p", size = 5, parse = TRUE) +
+  annotate("text", x = 4.5/9, y = 3.5, label = "~B", size = 5, parse = TRUE) +
+  xlim(c(-0.1, 0.6)) +
+  theme +
+  theme(axis.ticks = element_blank(),
+        axis.line = element_blank(),
+        axis.text = element_blank())
+
+```
+
+## Bailey 2001 model
+
+```{r energy_band_model_Bailey2001}
+
+e_trap <- data.frame(
+  x = c(6, 8, 9, 11,  12, 14, 15, 17, 24 , 26),
+  y = rep(c(4.6, 4.4, 4.2, 4, 3.8)+1.8, each = 2),
+  group = rep(1:5, each = 2)
+)
+
+recombination_centre <- data.frame(
+  x = c(0, 2, 3, 5, 18, 20, 21, 23),
+  y = rep(c(2.4, 2.8, 3.5, 3.5), each = 2),
+  group = rep(1:4, each = 2)
+)
+
+arrow_RC_down <- data.frame(
+  x_start = c(c(1, 4, 19, 22), c(1, 4, 19, 22) + 1/3),
+  x_end = c(c(1, 4, 19, 22), c(1, 4, 19, 22) + 1/3),
+  y_start = c(rep(7, 4), c(2.4, 2.8, 3.5, 3.5)),
+  y_end = c(2.4, 2.8, 3.5, 3.5, rep(1,4))
+)
+
+arrow_RC_up <- data.frame(
+  x_start = c(1, 4, 19, 22) - 1/3,
+  x_end = c(1, 4, 19, 22) - 1/3,
+  y_start = rep(1, 4),
+  y_end = c(2.4, 2.8, 3.5, 3.5)
+)
+
+arrow_e_down <- data.frame(
+  x_start = c(7,10,13,16,25) - 1/3,
+  x_end = c(7,10,13,16,25) - 1/3,
+  y_start = rep(7, 5),
+  y_end = c(4.6, 4.4, 4.2, 4, 3.8) + 1.8
+)
+
+arrow_R <- data.frame(
+  x_start = 28,
+  x_end = 28,
+  y_start = 1,
+  y_end = 7
+)
+
+arrow_e_up <- data.frame(
+  x_end = c(7,10,13,16,25) + 1/3,
+  x_start = c(7,10,13,16,25) + 1/3,
+  y_end = rep(7, 5),
+  y_start = c(4.6, 4.4, 4.2, 4, 3.8) + 1.8
+)
+
+arrow <- dplyr::bind_rows(arrow_RC_up, arrow_RC_down,
+                   arrow_e_down, arrow_e_up,
+                   arrow_R)
+
+bands <- data.frame(
+  x_start = c(-Inf, -Inf),
+  x_end = c(Inf, Inf),
+  y_start = c(0, 8),
+  y_end = c(1, 7)
+)
+
+
+ggplot() +
+  geom_hline(yintercept = c(1, 7)) +
+  ## add donor state
+  geom_line(data = e_trap, aes(x,y, group = group), show.legend = F) +
+  ## add recombination state
+  geom_line(data = recombination_centre, aes(x,y, group = group), show.legend = F) +
+  ## add captured electrons and holes 
+  # geom_point(data = captured, 
+  #            aes(x,y),
+  #            shape = 21,
+  #            size = 3, 
+  #            fill =  c("black", "white"),
+  #            show.legend = F) +
+  geom_segment(data = arrow, mapping = aes(x = x_start, y = y_start, xend = x_end, yend = y_end),
+               arrow = arrow(angle = 20,
+                             length = unit(0.15, "inches"))) +
+  
+  ## shaded area valence band
+  geom_rect(data = bands,
+            mapping = aes(xmin = x_start, ymin = y_start, xmax = x_end, ymax = y_end),
+            alpha = .3) + 
+  # coord_fixed(2) +
+  xlab("") +
+  ylab("") +
+  theme_classic() +
+  annotate("text", x = 14, y = 7.5, label = "Conduction band", size = 5) +
+  annotate("text", x = 14, y = 0.5, label = "Valence band", size = 5) +
+  annotate("text", x = -1, y = 2.4, label = "~R[1]", size = 3.5, parse = T) +
+  annotate("text", x = 6, y = 2.8, label = "~R[2]", size = 3.5, parse = T) +
+  annotate("text", x = 17, y = 3.5, label = "~L", size = 3.5, parse = T) +
+  annotate("text", x = 24, y = 3.5, label = "~K", size = 3.5, parse = T) +
+  # annotate("text", x = 29, y = 4, label = "R", size = 3.5) +
+  annotate("text", x = 7, y = 5.8, label = "110 °C \n TL", size = 3.5) +
+  annotate("text", x = 10, y = 5.6, label = "230 °C \n TL", size = 3.5) +
+  annotate("text", x = 13, y = 5.6, label = "OSL[ f]", size = 3.5, parse = T) +
+  annotate("text", x = 16, y = 5.5, label = "OSL[ m]", size = 3.5, parse = T) +
+  annotate("text", x = 25, y = 5.4, label = "Deep", size = 3.5) +
+  theme +
+  theme(axis.ticks = element_blank(),
+        axis.line = element_blank(),
+        axis.text = element_blank())
+
+```
